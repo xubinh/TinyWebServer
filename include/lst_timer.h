@@ -1,54 +1,52 @@
 #ifndef LST_TIMER
 #define LST_TIMER
 
-#include <unistd.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/epoll.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <assert.h>
-#include <sys/stat.h>
-#include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
 #include <pthread.h>
+#include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/epoll.h>
 #include <sys/mman.h>
-#include <stdarg.h>
-#include <errno.h>
-#include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/uio.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
+#include "log.h"
 #include <time.h>
-#include "../log/log.h"
 
 class util_timer;
 
-struct client_data
-{
+struct client_data {
     sockaddr_in address;
     int sockfd;
     util_timer *timer;
 };
 
-class util_timer
-{
+class util_timer {
 public:
-    util_timer() : prev(NULL), next(NULL) {}
+    util_timer() : prev(NULL), next(NULL) {
+    }
 
 public:
     time_t expire;
-    
-    void (* cb_func)(client_data *);
+
+    void (*cb_func)(client_data *);
     client_data *user_data;
     util_timer *prev;
     util_timer *next;
 };
 
-class sort_timer_lst
-{
+class sort_timer_lst {
 public:
     sort_timer_lst();
     ~sort_timer_lst();
@@ -65,11 +63,12 @@ private:
     util_timer *tail;
 };
 
-class Utils
-{
+class Utils {
 public:
-    Utils() {}
-    ~Utils() {}
+    Utils() {
+    }
+    ~Utils() {
+    }
 
     void init(int timeslot);
 
