@@ -33,6 +33,7 @@ private:
     connection_pool *m_connPool; //数据库
     int m_actor_model;           //模型切换
 };
+
 template <typename T>
 threadpool<T>::threadpool(int actor_model, connection_pool *connPool,
                           int thread_number, int max_requests)
@@ -40,37 +41,48 @@ threadpool<T>::threadpool(int actor_model, connection_pool *connPool,
       m_max_requests(max_requests), m_threads(NULL), m_connPool(connPool) {
     if (thread_number <= 0 || max_requests <= 0)
         throw std::exception();
+
     m_threads = new pthread_t[m_thread_number];
+
     if (!m_threads)
         throw std::exception();
+
     for (int i = 0; i < thread_number; ++i) {
         if (pthread_create(m_threads + i, NULL, worker, this) != 0) {
             delete[] m_threads;
             throw std::exception();
         }
+
         if (pthread_detach(m_threads[i])) {
             delete[] m_threads;
             throw std::exception();
         }
     }
 }
+
 template <typename T>
 threadpool<T>::~threadpool() {
     delete[] m_threads;
 }
+
 template <typename T>
 bool threadpool<T>::append(T *request, int state) {
     m_queuelocker.lock();
+
     if (m_workqueue.size() >= m_max_requests) {
         m_queuelocker.unlock();
         return false;
     }
+
     request->m_state = state;
+
     m_workqueue.push_back(request);
     m_queuelocker.unlock();
     m_queuestat.post();
+
     return true;
 }
+
 template <typename T>
 bool threadpool<T>::append_p(T *request) {
     m_queuelocker.lock();
@@ -83,12 +95,14 @@ bool threadpool<T>::append_p(T *request) {
     m_queuestat.post();
     return true;
 }
+
 template <typename T>
 void *threadpool<T>::worker(void *arg) {
     threadpool *pool = (threadpool *)arg;
     pool->run();
     return pool;
 }
+
 template <typename T>
 void threadpool<T>::run() {
     while (true) {
@@ -127,4 +141,5 @@ void threadpool<T>::run() {
         }
     }
 }
+
 #endif

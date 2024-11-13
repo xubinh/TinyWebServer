@@ -1,6 +1,10 @@
 #ifndef HTTPCONNECTION_H
 #define HTTPCONNECTION_H
 
+#include "locker.h"
+#include "log.h"
+#include "lst_timer.h"
+#include "sql_connection_pool.h"
 #include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
@@ -21,11 +25,6 @@
 #include <sys/uio.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
-#include "locker.h"
-#include "log.h"
-#include "lst_timer.h"
-#include "sql_connection_pool.h"
 
 class http_conn {
 public:

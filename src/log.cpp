@@ -1,9 +1,10 @@
-#include "../include/log.h"
 #include <pthread.h>
 #include <stdarg.h>
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
+
+#include "../include/log.h"
 
 using namespace std;
 
@@ -17,15 +18,18 @@ Log::~Log() {
         fclose(m_fp);
     }
 }
-//异步需要设置阻塞队列的长度，同步不需要设置
+
+// 异步需要设置阻塞队列的长度, 同步不需要设置
 bool Log::init(const char *file_name, int close_log, int log_buf_size,
                int split_lines, int max_queue_size) {
-    //如果设置了max_queue_size,则设置为异步
+    // 如果设置了max_queue_size, 则设置为异步
     if (max_queue_size >= 1) {
         m_is_async = true;
         m_log_queue = new block_queue<string>(max_queue_size);
+
         pthread_t tid;
-        // flush_log_thread为回调函数,这里表示创建线程异步写日志
+
+        // flush_log_thread为回调函数, 这里表示创建线程异步写日志
         pthread_create(&tid, NULL, flush_log_thread, NULL);
     }
 
@@ -55,7 +59,9 @@ bool Log::init(const char *file_name, int close_log, int log_buf_size,
 
     m_today = my_tm.tm_mday;
 
+    // 打开日志文件:
     m_fp = fopen(log_full_name, "a");
+
     if (m_fp == NULL) {
         return false;
     }
@@ -65,11 +71,15 @@ bool Log::init(const char *file_name, int close_log, int log_buf_size,
 
 void Log::write_log(int level, const char *format, ...) {
     struct timeval now = {0, 0};
+
     gettimeofday(&now, NULL);
+
     time_t t = now.tv_sec;
+
     struct tm *sys_tm = localtime(&t);
     struct tm my_tm = *sys_tm;
     char s[16] = {0};
+
     switch (level) {
     case 0:
         strcpy(s, "[debug]:");
@@ -87,30 +97,40 @@ void Log::write_log(int level, const char *format, ...) {
         strcpy(s, "[info]:");
         break;
     }
-    //写入一个log，对m_count++, m_split_lines最大行数
+
+    // 写入一个log, 对m_count++, m_split_lines最大行数
     m_mutex.lock();
     m_count++;
 
-    if (m_today != my_tm.tm_mday
-        || m_count % m_split_lines == 0) // everyday log
-    {
-
+    // 如果新的一天开始, 或者输出的日志行数达到了要另开一个新的文件输出的地步了:
+    if (m_today != my_tm.tm_mday || m_count % m_split_lines == 0) {
         char new_log[256] = {0};
+        char tail[16] = {0}; // 日期 (2024_01_01_)
+
+        // 清空当前日志文件的输出缓冲区:
         fflush(m_fp);
+
+        // 关闭当前日志文件:
         fclose(m_fp);
-        char tail[16] = {0};
 
         snprintf(tail, 16, "%d_%02d_%02d_", my_tm.tm_year + 1900,
                  my_tm.tm_mon + 1, my_tm.tm_mday);
 
+        // 如果新的一天开始:
         if (m_today != my_tm.tm_mday) {
             snprintf(new_log, 255, "%s%s%s", dir_name, tail, log_name);
+
             m_today = my_tm.tm_mday;
             m_count = 0;
-        } else {
+        }
+
+        // 如果输出的日志行数达到了要另开一个新的文件输出的地步了:
+        else {
             snprintf(new_log, 255, "%s%s%s.%lld", dir_name, tail, log_name,
                      m_count / m_split_lines);
         }
+
+        // 打开新的日志文件:
         m_fp = fopen(new_log, "a");
     }
 
@@ -122,7 +142,7 @@ void Log::write_log(int level, const char *format, ...) {
     string log_str;
     m_mutex.lock();
 
-    //写入的具体时间内容格式
+    // 写入的具体时间内容格式
     int n = snprintf(m_buf, 48, "%d-%02d-%02d %02d:%02d:%02d.%06ld %s ",
                      my_tm.tm_year + 1900, my_tm.tm_mon + 1, my_tm.tm_mday,
                      my_tm.tm_hour, my_tm.tm_min, my_tm.tm_sec, now.tv_usec, s);
@@ -134,9 +154,14 @@ void Log::write_log(int level, const char *format, ...) {
 
     m_mutex.unlock();
 
+    // 如果是异步日志模式并且工作队列没有满, 则将字符串输出至阻塞队列,
+    // 让日志线程来将其输出至文件:
     if (m_is_async && !m_log_queue->full()) {
         m_log_queue->push(log_str);
-    } else {
+    }
+
+    // 如果是同步日志模式或者工作队列已满, 则由当前线程直接输出字符串至文件:
+    else {
         m_mutex.lock();
         fputs(log_str.c_str(), m_fp);
         m_mutex.unlock();
@@ -147,7 +172,7 @@ void Log::write_log(int level, const char *format, ...) {
 
 void Log::flush(void) {
     m_mutex.lock();
-    //强制刷新写入流缓冲区
+    // 强制刷新写入流缓冲区
     fflush(m_fp);
     m_mutex.unlock();
 }

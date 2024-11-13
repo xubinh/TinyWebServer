@@ -3,7 +3,7 @@
 #include <fstream>
 #include <mysql/mysql.h>
 
-//定义http响应的一些状态信息
+// 定义http响应的一些状态信息
 const char *ok_200_title = "OK";
 const char *error_400_title = "Bad Request";
 const char *error_400_form =
@@ -22,25 +22,25 @@ locker m_lock;
 map<string, string> users;
 
 void http_conn::initmysql_result(connection_pool *connPool) {
-    //先从连接池中取一个连接
+    // 先从连接池中取一个连接
     MYSQL *mysql = NULL;
     connectionRAII mysqlcon(&mysql, connPool);
 
-    //在user表中检索username，passwd数据，浏览器端输入
+    // 在user表中检索username，passwd数据，浏览器端输入
     if (mysql_query(mysql, "SELECT username,passwd FROM user")) {
         LOG_ERROR("SELECT error:%s\n", mysql_error(mysql));
     }
 
-    //从表中检索完整的结果集
+    // 从表中检索完整的结果集
     MYSQL_RES *result = mysql_store_result(mysql);
 
-    //返回结果集中的列数
+    // 返回结果集中的列数
     int num_fields = mysql_num_fields(result);
 
-    //返回所有字段结构的数组
+    // 返回所有字段结构的数组
     MYSQL_FIELD *fields = mysql_fetch_fields(result);
 
-    //从结果集中获取下一行，将对应的用户名和密码，存入map中
+    // 从结果集中获取下一行，将对应的用户名和密码，存入map中
     while (MYSQL_ROW row = mysql_fetch_row(result)) {
         string temp1(row[0]);
         string temp2(row[1]);
@@ -48,7 +48,7 @@ void http_conn::initmysql_result(connection_pool *connPool) {
     }
 }
 
-//对文件描述符设置非阻塞
+// 对文件描述符设置非阻塞
 int setnonblocking(int fd) {
     int old_option = fcntl(fd, F_GETFL);
     int new_option = old_option | O_NONBLOCK;
@@ -56,7 +56,7 @@ int setnonblocking(int fd) {
     return old_option;
 }
 
-//将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
+// 将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
 void addfd(int epollfd, int fd, bool one_shot, int TRIGMode) {
     epoll_event event;
     event.data.fd = fd;
@@ -72,13 +72,13 @@ void addfd(int epollfd, int fd, bool one_shot, int TRIGMode) {
     setnonblocking(fd);
 }
 
-//从内核时间表删除描述符
+// 从内核时间表删除描述符
 void removefd(int epollfd, int fd) {
     epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0);
     close(fd);
 }
 
-//将事件重置为EPOLLONESHOT
+// 将事件重置为EPOLLONESHOT
 void modfd(int epollfd, int fd, int ev, int TRIGMode) {
     epoll_event event;
     event.data.fd = fd;
@@ -94,7 +94,7 @@ void modfd(int epollfd, int fd, int ev, int TRIGMode) {
 int http_conn::m_user_count = 0;
 int http_conn::m_epollfd = -1;
 
-//关闭连接，关闭一个连接，客户总量减一
+// 关闭连接，关闭一个连接，客户总量减一
 void http_conn::close_conn(bool real_close) {
     if (real_close && (m_sockfd != -1)) {
         printf("close %d\n", m_sockfd);
@@ -104,7 +104,7 @@ void http_conn::close_conn(bool real_close) {
     }
 }
 
-//初始化连接,外部调用初始化套接字地址
+// 初始化连接,外部调用初始化套接字地址
 void http_conn::init(int sockfd, const sockaddr_in &addr, char *root,
                      int TRIGMode, int close_log, string user, string passwd,
                      string sqlname) {
@@ -114,7 +114,7 @@ void http_conn::init(int sockfd, const sockaddr_in &addr, char *root,
     addfd(m_epollfd, sockfd, true, m_TRIGMode);
     m_user_count++;
 
-    //当浏览器出现连接重置时，可能是网站根目录出错或http响应格式出错或者访问的文件中内容完全为空
+    // 当浏览器出现连接重置时，可能是网站根目录出错或http响应格式出错或者访问的文件中内容完全为空
     doc_root = root;
     m_TRIGMode = TRIGMode;
     m_close_log = close_log;
@@ -126,7 +126,7 @@ void http_conn::init(int sockfd, const sockaddr_in &addr, char *root,
     init();
 }
 
-//初始化新接受的连接
+// 初始化新接受的连接
 // check_state默认为分析请求行状态
 void http_conn::init() {
     mysql = NULL;
@@ -153,8 +153,8 @@ void http_conn::init() {
     memset(m_real_file, '\0', FILENAME_LEN);
 }
 
-//从状态机，用于分析出一行内容
-//返回值为行的读取状态，有LINE_OK,LINE_BAD,LINE_OPEN
+// 从状态机，用于分析出一行内容
+// 返回值为行的读取状态，有LINE_OK,LINE_BAD,LINE_OPEN
 http_conn::LINE_STATUS http_conn::parse_line() {
     char temp;
     for (; m_checked_idx < m_read_idx; ++m_checked_idx) {
@@ -180,8 +180,8 @@ http_conn::LINE_STATUS http_conn::parse_line() {
     return LINE_OPEN;
 }
 
-//循环读取客户数据，直到无数据可读或对方关闭连接
-//非阻塞ET工作模式下，需要一次性将数据读完
+// 循环读取客户数据，直到无数据可读或对方关闭连接
+// 非阻塞ET工作模式下，需要一次性将数据读完
 bool http_conn::read_once() {
     if (m_read_idx >= READ_BUFFER_SIZE) {
         return false;
@@ -218,7 +218,7 @@ bool http_conn::read_once() {
     }
 }
 
-//解析http请求行，获得请求方法，目标url及http版本号
+// 解析http请求行，获得请求方法，目标url及http版本号
 http_conn::HTTP_CODE http_conn::parse_request_line(char *text) {
     m_url = strpbrk(text, " \t");
     if (!m_url) {
@@ -253,14 +253,14 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char *text) {
 
     if (!m_url || m_url[0] != '/')
         return BAD_REQUEST;
-    //当url为/时，显示判断界面
+    // 当url为/时，显示判断界面
     if (strlen(m_url) == 1)
         strcat(m_url, "judge.html");
     m_check_state = CHECK_STATE_HEADER;
     return NO_REQUEST;
 }
 
-//解析http请求的一个头部信息
+// 解析http请求的一个头部信息
 http_conn::HTTP_CODE http_conn::parse_headers(char *text) {
     if (text[0] == '\0') {
         if (m_content_length != 0) {
@@ -288,7 +288,7 @@ http_conn::HTTP_CODE http_conn::parse_headers(char *text) {
     return NO_REQUEST;
 }
 
-//判断http请求是否被完整读入
+// 判断http请求是否被完整读入
 http_conn::HTTP_CODE http_conn::parse_content(char *text) {
     if (m_read_idx >= (m_content_length + m_checked_idx)) {
         text[m_content_length] = '\0';
@@ -345,10 +345,10 @@ http_conn::HTTP_CODE http_conn::do_request() {
     // printf("m_url:%s\n", m_url);
     const char *p = strrchr(m_url, '/');
 
-    //处理cgi
+    // 处理cgi
     if (cgi == 1 && (*(p + 1) == '2' || *(p + 1) == '3')) {
 
-        //根据标志判断是登录检测还是注册检测
+        // 根据标志判断是登录检测还是注册检测
         char flag = m_url[1];
 
         char *m_url_real = (char *)malloc(sizeof(char) * 200);
@@ -357,7 +357,7 @@ http_conn::HTTP_CODE http_conn::do_request() {
         strncpy(m_real_file + len, m_url_real, FILENAME_LEN - len - 1);
         free(m_url_real);
 
-        //将用户名和密码提取出来
+        // 将用户名和密码提取出来
         // user=123&passwd=123
         char name[100], password[100];
         int i;
@@ -371,8 +371,8 @@ http_conn::HTTP_CODE http_conn::do_request() {
         password[j] = '\0';
 
         if (*(p + 1) == '3') {
-            //如果是注册，先检测数据库中是否有重名的
-            //没有重名的，进行增加数据
+            // 如果是注册，先检测数据库中是否有重名的
+            // 没有重名的，进行增加数据
             char *sql_insert = (char *)malloc(sizeof(char) * 200);
             strcpy(sql_insert, "INSERT INTO user(username, passwd) VALUES(");
             strcat(sql_insert, "'");
@@ -394,8 +394,8 @@ http_conn::HTTP_CODE http_conn::do_request() {
             } else
                 strcpy(m_url, "/registerError.html");
         }
-        //如果是登录，直接判断
-        //若浏览器端输入的用户名和密码在表中可以查找到，返回1，否则返回0
+        // 如果是登录，直接判断
+        // 若浏览器端输入的用户名和密码在表中可以查找到，返回1，否则返回0
         else if (*(p + 1) == '2') {
             if (users.find(name) != users.end() && users[name] == password)
                 strcpy(m_url, "/welcome.html");

@@ -122,7 +122,7 @@ void Utils::init(int timeslot) {
     m_TIMESLOT = timeslot;
 }
 
-//对文件描述符设置非阻塞
+// 对文件描述符设置非阻塞
 int Utils::setnonblocking(int fd) {
     int old_option = fcntl(fd, F_GETFL);
     int new_option = old_option | O_NONBLOCK;
@@ -130,7 +130,7 @@ int Utils::setnonblocking(int fd) {
     return old_option;
 }
 
-//将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
+// 将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
 void Utils::addfd(int epollfd, int fd, bool one_shot, int TRIGMode) {
     epoll_event event;
     event.data.fd = fd;
@@ -146,16 +146,16 @@ void Utils::addfd(int epollfd, int fd, bool one_shot, int TRIGMode) {
     setnonblocking(fd);
 }
 
-//信号处理函数
+// 信号处理函数
 void Utils::sig_handler(int sig) {
-    //为保证函数的可重入性，保留原来的errno
+    // 为保证函数的可重入性，保留原来的errno
     int save_errno = errno;
     int msg = sig;
     send(u_pipefd[1], (char *)&msg, 1, 0);
     errno = save_errno;
 }
 
-//设置信号函数
+// 设置信号函数
 void Utils::addsig(int sig, void(handler)(int), bool restart) {
     struct sigaction sa;
     memset(&sa, '\0', sizeof(sa));
@@ -166,7 +166,7 @@ void Utils::addsig(int sig, void(handler)(int), bool restart) {
     assert(sigaction(sig, &sa, NULL) != -1);
 }
 
-//定时处理任务，重新定时以不断触发SIGALRM信号
+// 定时处理任务，重新定时以不断触发SIGALRM信号
 void Utils::timer_handler() {
     m_timer_lst.tick();
     alarm(m_TIMESLOT);
