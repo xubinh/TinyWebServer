@@ -66,8 +66,16 @@ public:
     }
 
 public:
-    void init(int sockfd, const sockaddr_in &addr, char *, int, int,
-              string user, string passwd, string sqlname);
+    void init(
+        int sockfd,
+        const sockaddr_in &addr,
+        char *,
+        int,
+        int,
+        string user,
+        string passwd,
+        string sqlname
+    );
     void close_conn(bool real_close = true);
     void process();
     bool read_once();
@@ -75,7 +83,7 @@ public:
     sockaddr_in *get_address() {
         return &m_address;
     }
-    void initmysql_result(connection_pool *connPool);
+    void initmysql_result(ConnectionPool *connPool);
     int timer_flag;
     int improv;
 

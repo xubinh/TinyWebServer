@@ -21,10 +21,10 @@ const char *error_500_form =
 locker m_lock;
 map<string, string> users;
 
-void http_conn::initmysql_result(connection_pool *connPool) {
+void http_conn::initmysql_result(ConnectionPool *connPool) {
     // 先从连接池中取一个连接
     MYSQL *mysql = NULL;
-    connectionRAII mysqlcon(&mysql, connPool);
+    ConnectionRAII mysqlcon(&mysql, connPool);
 
     // 在user表中检索username，passwd数据，浏览器端输入
     if (mysql_query(mysql, "SELECT username,passwd FROM user")) {
@@ -105,9 +105,16 @@ void http_conn::close_conn(bool real_close) {
 }
 
 // 初始化连接,外部调用初始化套接字地址
-void http_conn::init(int sockfd, const sockaddr_in &addr, char *root,
-                     int TRIGMode, int close_log, string user, string passwd,
-                     string sqlname) {
+void http_conn::init(
+    int sockfd,
+    const sockaddr_in &addr,
+    char *root,
+    int TRIGMode,
+    int close_log,
+    string user,
+    string passwd,
+    string sqlname
+) {
     m_sockfd = sockfd;
     m_address = addr;
 
@@ -190,8 +197,9 @@ bool http_conn::read_once() {
 
     // LT读取数据
     if (0 == m_TRIGMode) {
-        bytes_read = recv(m_sockfd, m_read_buf + m_read_idx,
-                          READ_BUFFER_SIZE - m_read_idx, 0);
+        bytes_read = recv(
+            m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0
+        );
         m_read_idx += bytes_read;
 
         if (bytes_read <= 0) {
@@ -203,8 +211,12 @@ bool http_conn::read_once() {
     // ET读数据
     else {
         while (true) {
-            bytes_read = recv(m_sockfd, m_read_buf + m_read_idx,
-                              READ_BUFFER_SIZE - m_read_idx, 0);
+            bytes_read = recv(
+                m_sockfd,
+                m_read_buf + m_read_idx,
+                READ_BUFFER_SIZE - m_read_idx,
+                0
+            );
             if (bytes_read == -1) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
                     break;
@@ -508,8 +520,12 @@ bool http_conn::add_response(const char *format, ...) {
         return false;
     va_list arg_list;
     va_start(arg_list, format);
-    int len = vsnprintf(m_write_buf + m_write_idx,
-                        WRITE_BUFFER_SIZE - 1 - m_write_idx, format, arg_list);
+    int len = vsnprintf(
+        m_write_buf + m_write_idx,
+        WRITE_BUFFER_SIZE - 1 - m_write_idx,
+        format,
+        arg_list
+    );
     if (len >= (WRITE_BUFFER_SIZE - 1 - m_write_idx)) {
         va_end(arg_list);
         return false;
@@ -534,8 +550,9 @@ bool http_conn::add_content_type() {
     return add_response("Content-Type:%s\r\n", "text/html");
 }
 bool http_conn::add_linger() {
-    return add_response("Connection:%s\r\n",
-                        (m_linger == true) ? "keep-alive" : "close");
+    return add_response(
+        "Connection:%s\r\n", (m_linger == true) ? "keep-alive" : "close"
+    );
 }
 bool http_conn::add_blank_line() {
     return add_response("%s", "\r\n");
